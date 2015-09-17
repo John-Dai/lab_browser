@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ResourceBundle;
 
 
 /**
@@ -21,7 +22,8 @@ public class BrowserModel {
     private int myCurrentIndex;
     private List<URL> myHistory;
     private Map<String, URL> myFavorites;
-
+    private ResourceBundle myErrorResources; 
+    public static final String DEFAULT_RESOURCE_PACKAGE = "resources/";
 
     /**
      * Creates an empty model.
@@ -32,43 +34,54 @@ public class BrowserModel {
         myCurrentIndex = -1;
         myHistory = new ArrayList<>();
         myFavorites = new HashMap<>();
+        myErrorResources = ResourceBundle.getBundle(DEFAULT_RESOURCE_PACKAGE + "Error");
     }
 
     /**
      * Returns the first page in next history, null if next history is empty.
+     * @throws BrowserException
      */
-    public URL next () {
+    public URL next () throws BrowserException {
         if (hasNext()) {
             myCurrentIndex++;
             return myHistory.get(myCurrentIndex);
         }
-        return null;
+        
+        throw new BrowserException(myErrorResources.getString("noNextURL"));
+        
     }
 
     /**
      * Returns the first page in back history, null if back history is empty.
      */
-    public URL back () {
+    public URL back () throws BrowserException {
         if (hasPrevious()) {
             myCurrentIndex--;
             return myHistory.get(myCurrentIndex);
         }
-        return null;
+        
+        throw new BrowserException(myErrorResources.getString("noPreviousURL"));
     }
 
     /**
      * Changes current page to given URL, removing next history.
      */
     public URL go (String url) {
-        myCurrentURL = completeURL(url);
-        if (myCurrentURL != null) {
-            if (hasNext()) {
-                myHistory = myHistory.subList(0, myCurrentIndex + 1);
-            }
-            myHistory.add(myCurrentURL);
-            myCurrentIndex++;
+        try{
+            myCurrentURL = completeURL(url);
+                if (hasNext()) {
+                    myHistory = myHistory.subList(0, myCurrentIndex + 1);
+                }
+                myHistory.add(myCurrentURL);
+                myCurrentIndex++;
+            return myCurrentURL;
         }
-        return myCurrentURL;
+        catch (BrowserException e){
+            System.out.println("SDfds");
+
+            System.out.printf("Could not resolve URL %s", url);
+            return null; // need to change later 
+        }
     }
 
     /**
@@ -114,30 +127,39 @@ public class BrowserModel {
 
     /**
      * Returns URL from favorites associated with given name, null if none set.
+     * @throws BrowserException 
      */
-    public URL getFavorite (String name) {
+    public URL getFavorite (String name) throws BrowserException {
         if (name != null && !name.equals("") && myFavorites.containsKey(name)) {
             return myFavorites.get(name);
         }
-        return null;
+        throw new BrowserException(myErrorResources.getString("noFavoriteFound"));
     }
 
+
     // deal with a potentially incomplete URL
-    private URL completeURL (String possible) {
+    private URL completeURL (String possible) throws BrowserException {
         try {
+            System.out.println("00");
+
             // try it as is
             return new URL(possible);
         } catch (MalformedURLException e) {
+            System.out.println("aa");
+
             try {
                 // try it as a relative link
                 // BUGBUG: need to generalize this :(
                 return new URL(myCurrentURL.toString() + "/" + possible);
             } catch (MalformedURLException ee) {
+                System.out.println("bb");
+
                 try {
                     // e.g., let user leave off initial protocol
                     return new URL(PROTOCOL_PREFIX + possible);
                 } catch (MalformedURLException eee) {
-                    return null;
+                    System.out.println("cc");
+                    throw new BrowserException(myErrorResources.getString("incomplete"));
                 }
             }
         }

@@ -65,6 +65,7 @@ public class BrowserView {
     private ComboBox<String> myFavorites;
     // get strings from resource file
     private ResourceBundle myResources;
+    private ResourceBundle myErrorResources; 
     // the data
     private BrowserModel myModel;
 
@@ -75,6 +76,7 @@ public class BrowserView {
         myModel = model;
         // use resources for labels
         myResources = ResourceBundle.getBundle(DEFAULT_RESOURCE_PACKAGE + language);
+        myErrorResources = ResourceBundle.getBundle(DEFAULT_RESOURCE_PACKAGE + "Error");
         BorderPane root = new BorderPane();
         // must be first since other panels may refer to page
         root.setCenter(makePageDisplay());
@@ -84,7 +86,7 @@ public class BrowserView {
         enableButtons();
         // create scene to hold UI
         myScene = new Scene(root, DEFAULT_SIZE.width, DEFAULT_SIZE.height);
-        //myScene.getStylesheets().add(DEFAULT_RESOURCE_PACKAGE + STYLESHEET);
+        myScene.getStylesheets().add(DEFAULT_RESOURCE_PACKAGE + STYLESHEET);
     }
 
     /**
@@ -126,12 +128,22 @@ public class BrowserView {
 
     // move to the next URL in the history
     private void next () {
-        update(myModel.next());
+        try{
+            update(myModel.next());
+        }
+        catch(BrowserException e){
+            
+        }
     }
 
     // move to the previous URL in the history
     private void back () {
-        update(myModel.back());
+        try{
+            update(myModel.back());
+        }
+        catch(BrowserException e){
+            
+        }
     }
 
     // change current URL to the home page, if set
@@ -141,7 +153,12 @@ public class BrowserView {
 
     // change page to favorite choice
     private void showFavorite (String favorite) {
+        try {
         showPage(myModel.getFavorite(favorite).toString());
+        }
+        catch (BrowserException e) {
+            
+        }
     }
 
     // update just the view to display given URL
@@ -221,6 +238,11 @@ public class BrowserView {
     // make buttons for setting favorites/home URLs
     private Node makePreferencesPanel () {
         HBox result = new HBox();
+        myFavorites = new ComboBox<String>();
+        myFavorites.setPromptText(myResources.getString("FavoriteFirstItem"));
+        myFavorites.valueProperty().addListener((o,s1,s2) -> showFavorite(s2));
+        result.getChildren().add(makeButton("AddFavoriteCommand",event->addFavorite()));
+        result.getChildren().add(myFavorites);
         result.getChildren().add(makeButton("SetHomeCommand", event -> {
             myModel.setHome();
             enableButtons();
